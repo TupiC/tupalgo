@@ -21,6 +21,7 @@
     "@angular/router": "^16.2.0",
     "dijkstra-js": "github:kaisnb/dijkstra-ts",
     "dijkstrajs": "^1.0.3",
+    "fast-astar": "^1.0.6",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.13.0"
@@ -29,6 +30,7 @@
     "@angular-devkit/build-angular": "^16.2.9",
     "@angular/cli": "^16.2.9",
     "@angular/compiler-cli": "^16.2.0",
+    "@types/fast-astar": "^1.0.3",
     "@types/jasmine": "~4.3.0",
     "autoprefixer": "^10.4.19",
     "jasmine-core": "~4.6.0",

@@ -1,6 +1,7 @@
 import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 declare var require: any;
 var find_path = require('dijkstrajs').find_path;
+import { Grid, Astar } from "fast-astar";
 
 @Component({
   selector: 'app-root',
@@ -19,7 +20,8 @@ export class AppComponent implements AfterViewInit {
   startNode: string = '0,0';
   finishNode: string = '19,19';
   animationSpeed: number = 50;
-  path = [];
+  chosenAlgorithm: Algorithm = 'dijkstra';
+  path: any = [];
 
   ngAfterViewInit() {
     this.canvas = this.canvasRef.nativeElement;
@@ -33,7 +35,6 @@ export class AppComponent implements AfterViewInit {
     this.canvas.addEventListener('mousemove', (e) => {
       if (e.buttons === 1) this.onMouseDown(e);
     });
-
   }
 
   fillGraph(rows: number, cols: number, obstacles: Set<string>) {
@@ -106,9 +107,39 @@ export class AppComponent implements AfterViewInit {
 
   startAlgorithm() {
     this.path = [];
+    this.clearGreenLine();
+    if (this.chosenAlgorithm === 'dijkstra') {
+      this.runDijkstra();
+    } else {
+      this.runAstar();
+    }
+    this.visualizePath(this.path);
+  }
+
+  runDijkstra() {
     const graph = this.fillGraph(this.gridSize, this.gridSize, this.obstacles);
     this.path = find_path(graph, this.startNode, this.finishNode);
-    this.visualizePath(this.path);
+  }
+
+  runAstar() {
+    let grid = new Grid({ col: this.gridSize, row: this.gridSize });
+    this.obstacles.forEach((obstacle) => {
+      const [r, c] = obstacle.split(',').map(Number);
+      grid.set([r, c], 'value', 1);
+    });
+
+    let astar = new Astar(grid),
+      path = astar.search(
+        [0, 0],                   // start
+        [19, 19],                   // end
+        {                        // option
+          rightAngle: false,    // default:false,Allow diagonal
+          optimalResult: true   // default:true,In a few cases, the speed is slightly slower
+        }
+      )
+    if (path) {
+      this.path = path.map((node) => node.join(','));
+    }
   }
 
   visualizePath(path: string[]) {
@@ -132,4 +163,11 @@ export class AppComponent implements AfterViewInit {
     this.initGrid();
     this.drawGrid();
   }
+
+  clearGreenLine() {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.drawGrid();
+  }
 }
+
+type Algorithm = 'dijkstra' | 'astar'
