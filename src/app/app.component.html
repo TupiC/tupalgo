@@ -20,6 +20,11 @@
       Clear
     </button>
   </div>
+  <div class="flex items-center justify-center mt-4">
+    <p class="text-xl font-bold">
+      Time taken: {{ (timeTaken / 1000).toFixed(2) }}s
+    </p>
+  </div>
   <div class="flex items-center justify-center">
     <canvas #canvas class="border-2 border-black"></canvas>
   </div>

@@ -2,6 +2,7 @@ import { Component, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
 declare var require: any;
 var find_path = require('dijkstrajs').find_path;
 import { Grid, Astar } from "fast-astar";
+import { obstacles } from './obstacles';
 
 @Component({
   selector: 'app-root',
@@ -14,14 +15,19 @@ export class AppComponent implements AfterViewInit {
   canvas!: HTMLCanvasElement;
   ctx!: CanvasRenderingContext2D;
   grid: number[][] = [];
-  gridSize: number = 20;
-  cellSize: number = 20;
-  obstacles: Set<string> = new Set();
+  gridSize: number = 60;
+  cellSize: number = 10;
+  obstacles: Set<string> = obstacles
   startNode: string = '0,0';
-  finishNode: string = '19,19';
+  finishNode: string = '59,59';
   animationSpeed: number = 50;
   chosenAlgorithm: Algorithm = 'dijkstra';
   path: any = [];
+  timeTaken: number = 0;
+  finished = false;
+  intervalId: any;
+  startTime: number = 0;
+  paintSize: number = 1;
 
   ngAfterViewInit() {
     this.canvas = this.canvasRef.nativeElement;
@@ -81,9 +87,13 @@ export class AppComponent implements AfterViewInit {
   }
 
   drawGrid() {
+    const gridObstacles = Array.from(this.obstacles);
     for (let r = 0; r < this.gridSize; r++) {
       for (let c = 0; c < this.gridSize; c++) {
         this.ctx.fillStyle = this.grid[r][c] === 1 ? 'black' : 'white';
+        if (gridObstacles.includes(`${r},${c}`)) {
+          this.ctx.fillStyle = 'black';
+        }
         this.ctx.fillRect(c * this.cellSize, r * this.cellSize, this.cellSize, this.cellSize);
         this.ctx.strokeRect(c * this.cellSize, r * this.cellSize, this.cellSize, this.cellSize);
       }
@@ -98,22 +108,47 @@ export class AppComponent implements AfterViewInit {
     const row = Math.floor(y / this.cellSize);
 
     if (this.grid[row][col] === 0) {
-      this.grid[row][col] = 1;
-      this.obstacles.add(`${row},${col}`);
+      for (let r = row - this.paintSize; r <= row + this.paintSize; r++) {
+        for (let c = col - this.paintSize; c <= col + this.paintSize; c++) {
+          if (r >= 0 && r < this.gridSize && c >= 0 && c < this.gridSize) {
+            this.grid[r][c] = 1;
+            this.obstacles.add(`${r},${c}`);
+          }
+        }
+      }
     }
 
     this.drawGrid();
   }
 
   startAlgorithm() {
+    console.log(this.obstacles)
+    this.startTimer();
     this.path = [];
     this.clearGreenLine();
+    const start = performance.now();
     if (this.chosenAlgorithm === 'dijkstra') {
       this.runDijkstra();
     } else {
       this.runAstar();
     }
+    const end = performance.now();
+    this.timeTaken = end - start
     this.visualizePath(this.path);
+  }
+
+  startTimer() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+    this.startTime = performance.now();
+    this.finished = false;
+    this.intervalId = setInterval(() => {
+      if (!this.finished) {
+        const elapsed = performance.now() - this.startTime;
+        this.timeTaken = elapsed;
+      }
+    }, 10);
   }
 
   runDijkstra() {
@@ -128,13 +163,15 @@ export class AppComponent implements AfterViewInit {
       grid.set([r, c], 'value', 1);
     });
 
+    let start = this.startNode.split(',').map(Number);
+    let end = this.finishNode.split(',').map(Number);
     let astar = new Astar(grid),
       path = astar.search(
-        [0, 0],                   // start
-        [19, 19],                   // end
+        [start[0], start[1]],                // start
+        [end[0], end[1]],                   // end
         {                        // option
-          rightAngle: false,    // default:false,Allow diagonal
-          optimalResult: true   // default:true,In a few cases, the speed is slightly slower
+          rightAngle: true,    // default:false,Allow diagonal
+          optimalResult: false   // default:true,In a few cases, the speed is slightly slower
         }
       )
     if (path) {
@@ -151,7 +188,12 @@ export class AppComponent implements AfterViewInit {
         this.ctx.fillStyle = 'green';
         this.ctx.fillRect(c * this.cellSize, r * this.cellSize, this.cellSize, this.cellSize);
         this.ctx.strokeRect(c * this.cellSize, r * this.cellSize, this.cellSize, this.cellSize);
-      }, delay);
+
+        if (i === path.length - 1) {
+          this.finished = true;
+          clearInterval(this.intervalId);
+        }
+      }, delay)
       delay += this.animationSpeed;
     }
   }
@@ -170,4 +212,4 @@ export class AppComponent implements AfterViewInit {
   }
 }
 
-type Algorithm = 'dijkstra' | 'astar'
+type Algorithm = 'dijkstra' | 'astar';
